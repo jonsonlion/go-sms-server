@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>WebSocket Chat</title>
+</head>
+<body>
+<script type="text/javascript" src="jquery.min.js"></script>
+<script type="text/javascript">
+    $(function(){
+        $.getJSON("http://127.0.0.1:9090/api/1/openaccount/captcha/token",function (result) {
+            if(result.code == 1){
+                $("#imgcode").attr("src","http://127.0.0.1:9090/api/1/openaccount/captcha?token=" + result.token);
+            }
+        })
+    })
+</script>
+<form onsubmit="return false;">
+    <h3>验证码</h3>
+    <div>
+        <img src="" id="imgcode"/>
+    </div>
+</form>
+<br>
+<br>
+</body>
+</html>

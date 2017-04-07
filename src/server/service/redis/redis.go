@@ -1,4 +1,4 @@
-package service
+package redis
 
 import (
 	"github.com/garyburd/redigo/redis"
@@ -174,10 +174,10 @@ func Get(key string) interface{} {
 	return value
 }
 
-func GetString(key string) interface{} {
+func GetString(key string) string {
 	r := Get(key)
 	if r == nil {
-		return nil
+		return ""
 	}
 	value, _ := redis.String(r, nil)
 	return value

@@ -1,7 +1,7 @@
 package uuid
 
 import (
-	"../../../dependents/github.com/sluu99/uuid"
+	"github.com/sluu99/uuid"
 	"strings"
 )
 
