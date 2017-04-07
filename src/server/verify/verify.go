@@ -31,6 +31,17 @@ func StoreImageCaptchaToken(token string, value string){
 	redis.EXPIRE(key, REDIS_KEY_IMAGE_CAPTCHA_TOKEN_EXPIRE)
 }
 
+//存储图片验证码token验证
+func ValidateImageCodeToken(token string)(bool,error){
+	key := fmt.Sprintf(REDIS_KEY_IMAGE_CAPTCHA_TOKEN, token)
+	value := redis.GetString(key)
+	if "" == value{
+		return false, errors.New(fmt.Sprintf("img token invalidate, token:%s",token))
+	}
+	redis.DEL(key)//验证完后清理掉
+	return true,nil
+}
+
 //发送短信验证码
 // token string 图片验证码token
 // imgcode string 图片验证码值

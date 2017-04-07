@@ -5,7 +5,7 @@ import (
 	"server/app/domain"
 	"encoding/json"
 	"server/utils/logger"
-	"github.com/dchest/captcha"
+	"server/verify/captcha"
 	"server/verify/store"
 	"time"
 	"github.com/gorilla/mux"
@@ -82,12 +82,15 @@ func GetImageCaptcha(w http.ResponseWriter, req *http.Request){
 	if "" != req.FormValue("hight"){
 		hight,_ = strconv.Atoi(req.FormValue("hight"))
 	}
-	id := captcha.NewLen(4)
-	imgerr := captcha.WriteImage(w,id,width,hight)
-	if nil != imgerr{
-		logger.Error(nil,"GetImageCaptcha captcha.NewImage error %s",imgerr)
+	b,err := verify.ValidateImageCodeToken(token)
+	if b{
+		id := captcha.NewLenCustom(4, token)
+		err = captcha.WriteImage(w,id,width,hight)
+	}
+	if nil != err{
+		logger.Error(nil,"GetImageCaptcha captcha.NewImage error %s",err)
 		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(fmt.Sprintf(errorStr,imgerr)))
+		w.Write([]byte(fmt.Sprintf(errorStr,err)))
 	}
 }
 
