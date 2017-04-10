@@ -8,19 +8,80 @@
 <script type="text/javascript" src="jquery.min.js"></script>
 <script type="text/javascript">
     $(function(){
+        getImageCaptcha();
+    });
+    function getImageCaptcha() {
         $.getJSON("http://127.0.0.1:9090/api/1/openaccount/captcha/token",function (result) {
             if(result.code == 1){
-                $("#imgcode").attr("src","http://127.0.0.1:9090/api/1/openaccount/captcha?token=" + result.token);
+                $("#imgtoken").val(result.token);
+                $("#imgcode").attr("src","http://127.0.0.1:9090/api/1/openaccount/captcha?width=100&height=40&token=" + result.token);
             }
         })
-    })
+    }
+    function sendSms() {
+        var phone = $("#phone").val();
+        if("" == phone){
+            alert("请填写手机号");
+            return ;
+        }
+        var imgcaptcha = $("#imgcaptcha").val();
+        if("" == imgcaptcha){
+            alert("请填图片验证码");
+            return ;
+        }
+        $.ajax({
+            url: "http://127.0.0.1:9090/api/1/openaccount/captcha/sms/send",
+            method: "POST",
+            data: { phone:phone, token:$("#imgtoken").val(), imgcaptcha:imgcaptcha}
+        }).done(function( msg ) {
+            $("#resultText").empty().text( "发送完成: " + JSON.stringify(msg) );
+            $("#smstoken").val(msg.token);
+            $("#smsphone").val($("#phone").val());
+        });
+    }
+    function checkCaptcha() {
+
+        var smscaptcha = $("#smscaptcha").val();
+        if("" == smscaptcha){
+            alert("请填短信验证码");
+            return ;
+        }
+        $.ajax({
+            url: "http://127.0.0.1:9090/api/1/openaccount/captcha/sms/verify",
+            method: "POST",
+            data: { phone:$("#smsphone").val(), token:$("#smstoken").val(), captcha:smscaptcha}
+        }).done(function( msg ) {
+            $("#checkResult").empty().text( "验证完成: " + JSON.stringify(msg) );
+        });
+    }
 </script>
-<form onsubmit="return false;">
-    <h3>验证码</h3>
-    <div>
-        <img src="" id="imgcode"/>
-    </div>
-</form>
+1. 图形验证码：
+<a href="#" onclick="getImageCaptcha()" >重新获取</a>
+<h3>验证码</h3>
+<div>
+    <img src="" id="imgcode"/>
+    <input id="imgtoken" size="50"/>
+</div>
+<hr/>
+
+2. 发送短信：
+<br/>
+图片验证码：<input id="imgcaptcha" />
+<br/>
+手机号：<input id="phone" /><a href="#" onclick="sendSms()" >发送短信</a>
+<div id="resultText">
+
+</div>
+<hr/>
+3. 验证短信验证码：
+<br/>
+<input id="smstoken" size="50"/>
+<input id="smsphone" size="50"/>
+<br/>
+短信验证码：<input id="smscaptcha" /><a href="#" onclick="checkCaptcha()" >验证</a>
+<div id="checkResult">
+
+</div>
 <br>
 <br>
 </body>

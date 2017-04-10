@@ -8,8 +8,10 @@ import (
 	"server/utils/random"
 	"encoding/json"
 	"errors"
-	"github.com/dchest/captcha"
+	"server/verify/captcha"
 	"server/utils/convert"
+	"server/verify/store"
+	"server/app/domain"
 )
 
 var (
@@ -27,8 +29,7 @@ func GenerateFlowToken()string{
 //存储token，记录获取图片token的有效性
 func StoreImageCaptchaToken(token string, value string){
 	key := fmt.Sprintf(REDIS_KEY_IMAGE_CAPTCHA_TOKEN, token)
-	redis.Set(key , value)
-	redis.EXPIRE(key, REDIS_KEY_IMAGE_CAPTCHA_TOKEN_EXPIRE)
+	redis.SetAndExpire(key , value, REDIS_KEY_IMAGE_CAPTCHA_TOKEN_EXPIRE)
 }
 
 //存储图片验证码token验证
@@ -46,23 +47,27 @@ func ValidateImageCodeToken(token string)(bool,error){
 // token string 图片验证码token
 // imgcode string 图片验证码值
 // return []byte 返回 短信验证码
-func SendSms(token string, imgcode string, phone string, len int)(string, error){
+func SendSms(token string, imgcode string, phone string, len int)(string, error, int){
 	if !captcha.Verify(token,convert.StringToBytes(imgcode)){
-		return "", errors.New( fmt.Sprintf("img captcha invalidate, token:%s",token))
+		return "", errors.New(fmt.Sprintf("img captcha invalidate, token:%s",token)),domain.INVALID_IMG_CAPTCHA
 	}
 	code := random.RandomNum(len)
-	send(phone,code)
+	_, err := send(phone,code)
+	if nil != err{
+		return "", errors.New(fmt.Sprintf("send sms error result: %s" , err)), domain.ERROR
+	}
 	//添加到缓存
-	smstoken := GenerateFlowToken()
+	smstoken := GenerateFlowToken() + "@" + convert.BytesToString(random.RandomNum(5))
 	smskey := fmt.Sprintf(REDIS_KEY_SMS_CAPTCHA, smstoken)
 	smsvalue := map[string]string{
 		"phone" : phone,
-		"captcha" : string(code),
+		"captcha" : convert.BytesToString(code),
 	}
 	bv, _ := json.Marshal(smsvalue)
-	redis.Set(smskey , string(bv))
-	redis.EXPIRE(smskey, REDIS_KEY_SMS_CAPTCHA_EXPIRE)
-	return smstoken,nil
+	redis.SetAndExpire(smskey, string(bv), REDIS_KEY_SMS_CAPTCHA_EXPIRE)
+	//清除图形验证码缓存
+	store.Clear(token)
+	return smstoken,nil,domain.SUCCESS
 }
 
 //验证短信验证码是否正确
@@ -75,11 +80,11 @@ func ValidateSmsCaptcha(phone string, smstoken string, captcha string)bool{
 	value := redis.GetString(smskey)
 	json.Unmarshal([]byte(value), &smsvalue)
 	logger.Info(nil, "validate sms captcha cachevalue:%s, phone:%s, smstoken:%s, captcha:%s", smsvalue, phone, smstoken, captcha)
-	return phone != smsvalue["phone"] && captcha == smsvalue["captcha"]
+	return phone == smsvalue["phone"] && captcha == smsvalue["captcha"]
 }
 
-func send(phone string, verify []byte)string{
-	detail := fmt.Sprintf("感谢您的使用，您的验证码是 %s ,请在%d分钟内使用，谢谢！", string(verify), REDIS_KEY_SMS_CAPTCHA_EXPIRE/60)
+func send(phone string, verify []byte)(string,error){
+	detail := fmt.Sprintf("感谢您的使用，您的验证码是 %s ,请在%d分钟内使用，谢谢！", convert.BytesToString(verify), REDIS_KEY_SMS_CAPTCHA_EXPIRE/60)
 	logger.Info(nil,"send sms detail: %s", detail)
-	return "1"
+	return "1",nil
 }

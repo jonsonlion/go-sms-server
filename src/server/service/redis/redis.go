@@ -268,6 +268,26 @@ func ZADD(key string, score int32, value string) (interface{}, error) {
 	return result, err
 }
 
+func SetAndExpire(key string, value string, expire int) (interface{}, error) {
+	defer func() {
+		if v := recover(); v != nil {
+			logger.Info(nil, "SetAndExpire execute error occur， %s", v)
+		}
+	}()
+	c := initRedis("tcp", REDIS_ADDRESS)
+	var result interface{}
+	var err error
+	c.Send("MULTI")
+	c.Send("SET", key, value)
+	c.Send("EXPIRE",key, expire)
+	objs, err := c.Do("EXEC")
+	if err == nil {
+		result = objs
+	}
+	checkConnection(c, err)
+	return result, err
+}
+
 func ZRANGE(key string, start int32, end int32, withscores bool) ([]interface{}, error) {
 	defer func() {
 		if v := recover(); v != nil {

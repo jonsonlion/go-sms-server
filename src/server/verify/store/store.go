@@ -41,3 +41,9 @@ func (store *redisStore) Get(id string, clear bool)([]byte) {
 	s := convert.StringToBytes(value)
 	return s
 }
+
+//清除图形验证码
+func Clear(id string){
+	key := fmt.Sprintf(REDIS_KEY_STORE_ID, id)
+	redis.DEL(key)
+}

@@ -58,8 +58,8 @@ func httpServer(httpaddress string){
 	s.HandleFunc("/", api.Index)
 	s.HandleFunc("/1/{channel}/captcha/token", api.GetImageCaptchaToken) //图形验证码token
 	s.HandleFunc("/1/{channel}/captcha", api.GetImageCaptcha) //图形验证码
-	s.HandleFunc("/1/{channel}/captcha/sms/send", nil) //TODO 发送短信验证码
-	s.HandleFunc("/1/{channel}/captcha/sms/verify", nil) //TODO 验证码验证
+	s.HandleFunc("/1/{channel}/captcha/sms/send", api.SendSmsCaptcha) //发送短信验证码
+	s.HandleFunc("/1/{channel}/captcha/sms/verify", api.ValidateSmsCaptcha) //验证码验证
 	logger.Info(nil,"Server is at %s", httpaddress)
 	srv := &http.Server{
 		Handler:      r,
