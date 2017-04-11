@@ -12,6 +12,7 @@ import (
 	"server/verify"
 	"strconv"
 	"fmt"
+	"server/utils/requtil"
 )
 
 const (
@@ -56,16 +57,17 @@ func Index(w http.ResponseWriter, req *http.Request) {
 //获取图形验证码token
 func GetImageCaptchaToken(w http.ResponseWriter, req *http.Request){
 	channel := getPathParam("channel",req)
+	ip := requtil.GetIp(req)
 	result := domain.CaptchaToken{}
 	result.Code = domain.SUCCESS
 	result.Msg = "success"
 	result.Token = verify.GenerateFlowToken()
-	logger.Info(nil, "GetImageCaptchaToken channel: %s, token:%s",channel, result.Token)
+	logger.Info(nil, "GetImageCaptchaToken ip:%s, channel:%s, token:%s",ip,channel, result.Token)
 	setCommonHeaders(&w)
 	w.Header().Set("Content-Type", "application/json")
 	b, err := json.Marshal(result)
 	if nil == err{
-		verify.StoreImageCaptchaToken(result.Token,"TODO")//存储什么内容？
+		verify.StoreImageCaptchaToken(result.Token,ip)//存储什么内容？
 		w.Write(b)
 	}else{
 		w.Write([]byte(errorStr))
@@ -78,7 +80,8 @@ func GetImageCaptcha(w http.ResponseWriter, req *http.Request){
 	w.Header().Set("Content-Type", "image/png")
 	channel := getPathParam("channel",req)
 	token := req.FormValue("token")
-	logger.Info(nil, "GetImageCaptcha channel:%s, token:%s", channel, token)
+	ip := requtil.GetIp(req)
+	logger.Info(nil, "GetImageCaptcha ip:%s, channel:%s, token:%s", ip, channel, token)
 	width := 200
 	height := 80
 	if "" != req.FormValue("width"){
@@ -93,7 +96,7 @@ func GetImageCaptcha(w http.ResponseWriter, req *http.Request){
 		err = captcha.WriteImage(w,id,width,height)
 	}
 	if nil != err{
-		logger.Error(nil,"GetImageCaptcha captcha.NewImage error %s",err)
+		logger.Error(nil,"GetImageCaptcha captcha.NewImage ip:%s, error:%s",requtil.GetIp(req), err)
 		w.Header().Set("Content-Type", "application/json")
 		w.Write([]byte(fmt.Sprintf(errorStr,err)))
 	}
@@ -106,7 +109,8 @@ func SendSmsCaptcha(w http.ResponseWriter, req *http.Request){
 	phone := req.FormValue("phone")
 	imgcaptcha := req.FormValue("imgcaptcha")
 	signature := req.FormValue("signature")
-	logger.Info(nil, "SendSmsCaptcha channel: %s, phone:%s, token:%s, imgcaptcha:%s",channel,phone, token, imgcaptcha)
+	ip := requtil.GetIp(req)
+	logger.Info(nil, "SendSmsCaptcha ip:%s, channel: %s, phone:%s, token:%s, imgcaptcha:%s",ip, channel,phone, token, imgcaptcha)
 	setCommonHeaders(&w)
 	w.Header().Set("Content-Type", "application/json")
 
@@ -118,10 +122,9 @@ func SendSmsCaptcha(w http.ResponseWriter, req *http.Request){
 		result.Code = code
 		result.Msg = "发送验证码失败"
 		result.Reason = fmt.Sprintf("%s", err)
-		logger.Error(nil, "SendSmsCaptcha error channel: %s, phone:%s, token:%s, imgcaptcha:%s, error:%s",channel,phone, token, imgcaptcha,err)
+		logger.Error(nil, "SendSmsCaptcha error ip:%s, channel:%s, phone:%s, token:%s, imgcaptcha:%s, error:%s",requtil.GetIp(req), channel,phone, token, imgcaptcha,err)
 	}else{
 		result.Token = smsToken
-		verify.StoreImageCaptchaToken(result.Token,"TODO")//存储什么内容？
 	}
 	b, err := json.Marshal(result)
 	if nil == err{
@@ -131,13 +134,14 @@ func SendSmsCaptcha(w http.ResponseWriter, req *http.Request){
 	}
 }
 
-//发送短信验证码
+//验证短信验证码
 func ValidateSmsCaptcha(w http.ResponseWriter, req *http.Request){
 	channel := getPathParam("channel",req)
 	token := req.FormValue("token")
 	phone := req.FormValue("phone")
 	captcha := req.FormValue("captcha")
-	logger.Info(nil, "ValidateSmsCaptcha channel: %s, phone:%s, token:%s, captcha:%s",channel,phone, token, captcha)
+	ip := requtil.GetIp(req)
+	logger.Info(nil, "ValidateSmsCaptcha ip:%s, channel:%s, phone:%s, token:%s, captcha:%s",ip,channel,phone, token, captcha)
 	setCommonHeaders(&w)
 	w.Header().Set("Content-Type", "application/json")
 
