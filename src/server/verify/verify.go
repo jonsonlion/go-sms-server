@@ -12,6 +12,7 @@ import (
 	"server/utils/convert"
 	"server/verify/store"
 	"server/app/domain"
+	"server/service/sms"
 )
 
 var (
@@ -44,15 +45,16 @@ func ValidateImageCodeToken(token string)(bool,error){
 }
 
 //发送短信验证码
+// signature string 消息签名
 // token string 图片验证码token
 // imgcode string 图片验证码值
 // return []byte 返回 短信验证码
-func SendSms(token string, imgcode string, phone string, len int)(string, error, int){
+func SendSms(signature string,channel string, token string, imgcode string, phone string, len int)(string, error, int){
 	if !captcha.Verify(token,convert.StringToBytes(imgcode)){
 		return "", errors.New(fmt.Sprintf("img captcha invalidate, token:%s",token)),domain.INVALID_IMG_CAPTCHA
 	}
 	code := random.RandomNum(len)
-	_, err := send(phone,code)
+	_, err := send(phone,code,signature,channel)
 	if nil != err{
 		return "", errors.New(fmt.Sprintf("send sms error result: %s" , err)), domain.ERROR
 	}
@@ -83,8 +85,7 @@ func ValidateSmsCaptcha(phone string, smstoken string, captcha string)bool{
 	return phone == smsvalue["phone"] && captcha == smsvalue["captcha"]
 }
 
-func send(phone string, verify []byte)(string,error){
+func send(phone string, verify []byte, signature string, channel string)(string,error){
 	detail := fmt.Sprintf("感谢您的使用，您的验证码是 %s ,请在%d分钟内使用，谢谢！", convert.BytesToString(verify), REDIS_KEY_SMS_CAPTCHA_EXPIRE/60)
-	logger.Info(nil,"send sms detail: %s", detail)
-	return "1",nil
+	return sms.SendSms(phone,channel,signature,detail)
 }

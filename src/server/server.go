@@ -13,6 +13,8 @@ import (
 	"time"
 	"server/service/redis"
 	"strconv"
+	"server/service/amqp"
+	"server/service/sms"
 )
 
 //server 启动 ./server 环境
@@ -40,6 +42,11 @@ func main() {
 		config.ENV = "DEVELOPMENT"
 	}
 	logger.Info(nil, "server start at %s", config.ENV)
+	//开启mq监听
+	msgchan := make(chan []byte, 5)
+	go amqp.StartAmqpConsumer(msgchan)
+	go sms.SmsMqConsumer(msgchan)
+
 	redis.REDIS_ADDRESS = config.CONFIG[config.ENV]["REDIS_ADDRESS"]
 	redis.REDIS_PASSWORD = config.CONFIG[config.ENV]["REDIS_PASSWORD"]
 	redis.REDIS_MAX_POOL_SIZE, _ = strconv.Atoi(config.CONFIG[config.ENV]["MAX_POOL_SIZE"])

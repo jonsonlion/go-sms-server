@@ -105,6 +105,7 @@ func SendSmsCaptcha(w http.ResponseWriter, req *http.Request){
 	token := req.FormValue("token")
 	phone := req.FormValue("phone")
 	imgcaptcha := req.FormValue("imgcaptcha")
+	signature := req.FormValue("signature")
 	logger.Info(nil, "SendSmsCaptcha channel: %s, phone:%s, token:%s, imgcaptcha:%s",channel,phone, token, imgcaptcha)
 	setCommonHeaders(&w)
 	w.Header().Set("Content-Type", "application/json")
@@ -112,7 +113,7 @@ func SendSmsCaptcha(w http.ResponseWriter, req *http.Request){
 	result := domain.SmsCaptcha{}
 	result.Code = domain.SUCCESS
 	result.Msg = "success"
-	smsToken , err, code := verify.SendSms(token, imgcaptcha, phone, smsCaptchaLen)
+	smsToken , err, code := verify.SendSms(signature, channel.(string), token, imgcaptcha, phone, smsCaptchaLen)
 	if nil != err{
 		result.Code = code
 		result.Msg = "发送验证码失败"
