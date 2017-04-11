@@ -9,15 +9,10 @@ import (
 )
 
 type Item struct {
-	Topic        string                 //消息topic
-	ApnsId       string                 //消息编号
-	Token        string                 //消息token
-	Body         string                 //内容
-	Sound        string                 //声音
-	CustomFields map[string]interface{} //自定义消息
-	Arrived      int32                  //是否到达，0否：1：是
-	StatusCode   string                 //返回码
-	Reason       string                 //原因
+	Phone string `json:"phone"`
+	Channel string `json:"channel"`
+	Signature string `json:"signature"`
+	Message string `json:"message"`
 	CreateDate   time.Time              //消息创建时间
 }
 
