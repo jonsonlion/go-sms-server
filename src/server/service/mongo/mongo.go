@@ -6,47 +6,55 @@ import (
 	"server/config"
 	"server/utils/logger"
 	"time"
+	"server/utils/uuid"
 )
 
 type Item struct {
+	FlowId string `json:"flowid"`
 	Phone string `json:"phone"`
 	Channel string `json:"channel"`
 	Signature string `json:"signature"`
 	Message string `json:"message"`
-	CreateDate   time.Time              //消息创建时间
+	Arrived int `json:"arrived"`
+	Reason string `json:"reason"`
+	CreateDate   time.Time    `json:"createdate"`      //消息创建时间
 }
 
 type ItemResponse struct {
-	ApnsId     string //消息编号
-	Arrived    int32  //是否到达，0否：1：是
-	StatusCode string //返回码
-	Reason     string //原因
+	FlowId string `json:"flowid"`
+	Arrived int `json:"arrived"`
+	Reason string `json:"reason"`
 }
 
 var mgoSession *mgo.Session
 
-func SaveMessage(m Item) {
+func SaveMessage(m *Item) (string,error){
 	c := getConnection()
-	err := c.Insert(&m)
+	m.FlowId = uuid.GetUUIDWithoutLine()
+	err := c.Insert(m)
 	if err != nil {
 		logger.Error(nil, "insert message to mongo error %s", err)
 		mgoSession = nil
+		return "", nil
 	}
+	return m.FlowId,nil
 }
 
-func updateMessage(m ItemResponse) {
+func UpdateMessage(m *ItemResponse) error{
 	c := getConnection()
-	err := c.Update(bson.M{"apnsid": m.ApnsId}, bson.M{"$set": bson.M{"arrived": m.Arrived, "reason": m.Reason, "statuscode": m.StatusCode}})
+	err := c.Update(bson.M{"flowid": m.FlowId}, bson.M{"$set": bson.M{"arrived": m.Arrived, "reason": m.Reason}})
 	if err != nil {
-		logger.Error(nil, "update message to mongo error %s", err)
+		logger.Error(nil, "update message to mongo flowId:%s, error:%s",m.FlowId, err)
 		mgoSession = nil
+		return err
 	}
+	return nil
 }
 
-func FindMessage(apnsid string) Item {
+func FindMessage(flowId string) Item {
 	c := getConnection()
 	item := Item{}
-	err := c.Find(bson.M{"apnsid": apnsid}).One(&item)
+	err := c.Find(bson.M{"flowid": flowId}).One(&item)
 	if err != nil {
 		logger.Error(nil, "get message from mongo error %s", err)
 		mgoSession = nil
@@ -55,7 +63,7 @@ func FindMessage(apnsid string) Item {
 }
 
 func getConnection() *mgo.Collection {
-	return getSession().DB("push").C("messages")
+	return getSession().DB("sms").C("sendlog")
 }
 
 func getSession() *mgo.Session {
@@ -79,9 +87,9 @@ func getSession() *mgo.Session {
 }
 
 func createIndex(session *mgo.Session) {
-	c := session.DB("push").C("messages")
+	c := session.DB("sms").C("sendlog")
 	err := c.EnsureIndex(mgo.Index{
-		Key:        []string{"apnsid"},
+		Key:        []string{"flowid"},
 		Unique:     true,
 		Background: true,
 		DropDups:   true,
@@ -90,7 +98,7 @@ func createIndex(session *mgo.Session) {
 		logger.Error(nil, "crate index error %s", err)
 	}
 	err = c.EnsureIndex(mgo.Index{
-		Key:        []string{"statuscode"},
+		Key:        []string{"phone"},
 		Unique:     false,
 		Background: true,
 		DropDups:   true,
@@ -99,13 +107,40 @@ func createIndex(session *mgo.Session) {
 		logger.Error(nil, "crate index error %s", err)
 	}
 	err = c.EnsureIndex(mgo.Index{
-		Key:        []string{"createdate"},
+		Key:        []string{"arrived"},
 		Unique:     false,
 		Background: true,
-		//ExpireAfter: 60 * 60 * 24 * 14 * time.Second,  //缓存14天
-		ExpireAfter: 60 * 60 * 24 * 14 * time.Second, //缓存14天
+		DropDups:   true,
 	})
 	if nil != err {
 		logger.Error(nil, "crate index error %s", err)
 	}
+	err = c.EnsureIndex(mgo.Index{
+		Key:        []string{"signature"},
+		Unique:     false,
+		Background: true,
+		DropDups:   true,
+	})
+	if nil != err {
+		logger.Error(nil, "crate index error %s", err)
+	}
+	err = c.EnsureIndex(mgo.Index{
+		Key:        []string{"channel"},
+		Unique:     false,
+		Background: true,
+		DropDups:   true,
+	})
+	if nil != err {
+		logger.Error(nil, "crate index error %s", err)
+	}
+	//err = c.EnsureIndex(mgo.Index{
+	//	Key:        []string{"createdate"},
+	//	Unique:     false,
+	//	Background: true,
+	//	//ExpireAfter: 60 * 60 * 24 * 14 * time.Second,  //缓存14天
+	//	ExpireAfter: 60 * 60 * 24 * 14 * time.Second, //缓存14天
+	//})
+	//if nil != err {
+	//	logger.Error(nil, "crate index error %s", err)
+	//}
 }
