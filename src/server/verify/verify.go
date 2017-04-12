@@ -53,6 +53,11 @@ func SendSms(signature string,channel string, token string, imgcode string, phon
 	if !captcha.Verify(token,convert.StringToBytes(imgcode)){
 		return "", errors.New(fmt.Sprintf("img captcha invalidate, token:%s",token)),domain.INVALID_IMG_CAPTCHA
 	}
+	//拦截验证
+	c, e := interceptFilter(signature, channel, token, imgcode, phone)
+	if nil != e {
+		return "", e, c
+	}
 	code := random.RandomNum(len)
 	_, err := send(phone,code,signature,channel)
 	if nil != err{
@@ -83,6 +88,15 @@ func ValidateSmsCaptcha(phone string, smstoken string, captcha string)bool{
 	json.Unmarshal([]byte(value), &smsvalue)
 	logger.Info(nil, "validate sms captcha cachevalue:%s, phone:%s, smstoken:%s, captcha:%s", smsvalue, phone, smstoken, captcha)
 	return phone == smsvalue["phone"] && captcha == smsvalue["captcha"]
+}
+
+//拦截验证
+func interceptFilter(signature string,channel string, token string, imgcode string, phone string) (int, error){
+	// 验证图形验证码是否正确
+	if !captcha.Verify(token,convert.StringToBytes(imgcode)){
+		return "", errors.New(fmt.Sprintf("img captcha invalidate, token:%s",token)),domain.INVALID_IMG_CAPTCHA
+	}
+	//TODO
 }
 
 func send(phone string, verify []byte, signature string, channel string)(string,error){
