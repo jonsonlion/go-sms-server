@@ -46,9 +46,9 @@ func SendSms(phone string, channel string, signature string, message string) (st
 		m.Reason = r
 		err := mongo.UpdateMessage( &m )
 		if err != nil{
-			logger.Info(nil,"req-> send sms phone:%s, channel:%s, signature:%s, message: %s, error:%s",phone, channel, signature, message, err)
+			logger.Info(nil,"req-- send sms phone:%s, channel:%s, signature:%s, message: %s, error:%s",phone, channel, signature, message, err)
 		}
-		logger.Info(nil,"res-> send sms phone:%s, channel:%s, signature:%s, message: %s, result:%s",phone, channel, signature, message, r)
+		logger.Info(nil,"res-- send sms phone:%s, channel:%s, signature:%s, message: %s, result:%s",phone, channel, signature, message, r)
 	}
 	return "1", nil
 }
