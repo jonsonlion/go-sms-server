@@ -199,12 +199,6 @@ func DECR(key string) {
 	}
 }
 
-func INCR(key string) {
-	value, err := ExecuteSimple("INCR", key, nil, nil)
-	if err != nil {
-		logger.Error(logger.ExtraFileds{"cmd": "INCR", "key": key, "value": value}, "INCR command execute error %s", err)
-	}
-}
 
 func DEL(key string) {
 	value, err := ExecuteSimple("DEL", key, nil, nil)
@@ -286,6 +280,39 @@ func SetAndExpire(key string, value string, expire int) (interface{}, error) {
 	}
 	checkConnection(c, err)
 	return result, err
+}
+
+func IncrAndExpire(key string, expire int) (int, error) {
+	defer func() {
+		if v := recover(); v != nil {
+			logger.Info(nil, "SetAndExpire execute error occur， %s", v)
+		}
+	}()
+	c := initRedis("tcp", REDIS_ADDRESS)
+	var err error
+	c.Send("MULTI")
+	c.Send("INCR", key)
+	c.Send("EXPIRE",key, expire)
+	objs, err := c.Do("EXEC")
+	checkConnection(c, err)
+	v, _ := redis.Ints(objs, nil)
+	return v[0],err
+}
+
+func Incr(key string) (int, error) {
+	defer func() {
+		if v := recover(); v != nil {
+			logger.Info(nil, "Incr execute error occur， %s", v)
+		}
+	}()
+	c := initRedis("tcp", REDIS_ADDRESS)
+	var err error
+	c.Send("MULTI")
+	c.Send("INCR", key)
+	objs, err := c.Do("EXEC")
+	checkConnection(c, err)
+	v, _ := redis.Ints(objs, nil)
+	return v[0],err
 }
 
 func ZRANGE(key string, start int32, end int32, withscores bool) ([]interface{}, error) {

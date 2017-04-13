@@ -63,10 +63,11 @@ func httpServer(httpaddress string){
 	r := mux.NewRouter()
 	s := r.PathPrefix("/api").Subrouter()
 	s.HandleFunc("/", api.Index)
-	s.HandleFunc("/1/{channel}/captcha/token", api.GetImageCaptchaToken) //图形验证码token
-	s.HandleFunc("/1/{channel}/captcha", api.GetImageCaptcha) //图形验证码
-	s.HandleFunc("/1/{channel}/captcha/sms/send", api.SendSmsCaptcha) //发送短信验证码
-	s.HandleFunc("/1/{channel}/captcha/sms/verify", api.ValidateSmsCaptcha) //验证码验证
+	s.HandleFunc("/1/{channel}/captcha/token", api.GetImageCaptchaToken) //GET 图形验证码token
+	s.HandleFunc("/1/{channel}/captcha", api.GetImageCaptcha) //GET 图形验证码
+	s.HandleFunc("/1/{channel}/captcha/sms/send", api.SendSmsCaptcha) //POST 发送短信验证码
+	s.HandleFunc("/1/{channel}/captcha/sms/verify", api.ValidateSmsCaptcha) //POST 验证码验证
+	s.HandleFunc("/1/{channel}/captcha/sms/manmade", api.ManMadeSmsCaptcha) //POST 人工设置验证码
 	logger.Info(nil,"Server is at %s", httpaddress)
 	srv := &http.Server{
 		Handler:      r,

@@ -13,6 +13,8 @@ import (
 	"strconv"
 	"fmt"
 	"server/utils/requtil"
+	"server/utils/random"
+	"server/utils/convert"
 )
 
 const (
@@ -117,7 +119,7 @@ func SendSmsCaptcha(w http.ResponseWriter, req *http.Request){
 	result := domain.SmsCaptcha{}
 	result.Code = domain.SUCCESS
 	result.Msg = "success"
-	smsToken , err, code := verify.SendSms(signature, channel.(string), token, imgcaptcha, phone, smsCaptchaLen)
+	smsToken , err, code := verify.SendSms(signature, channel.(string), token, imgcaptcha, phone, smsCaptchaLen, ip)
 	if nil != err{
 		result.Code = code
 		result.Msg = "发送验证码失败"
@@ -139,23 +141,54 @@ func ValidateSmsCaptcha(w http.ResponseWriter, req *http.Request){
 	channel := getPathParam("channel",req)
 	token := req.FormValue("token")
 	phone := req.FormValue("phone")
-	captcha := req.FormValue("captcha")
+	ca := req.FormValue("captcha")
 	ip := requtil.GetIp(req)
-	logger.Info(nil, "ValidateSmsCaptcha ip:%s, channel:%s, phone:%s, token:%s, captcha:%s",ip,channel,phone, token, captcha)
+	logger.Info(nil, "ValidateSmsCaptcha ip:%s, channel:%s, phone:%s, token:%s, captcha:%s",ip,channel,phone, token, ca)
 	setCommonHeaders(&w)
 	w.Header().Set("Content-Type", "application/json")
 
 	result := domain.SmsCaptcha{}
 	result.Code = domain.SUCCESS
 	result.Msg = "success"
-	r := verify.ValidateSmsCaptcha(phone, token, captcha)
+	r := verify.ValidateSmsCaptcha(phone, token, ca)
 	if r{
 		result.Code = domain.SUCCESS
 		result.Msg = "验证成功"
 	}else{
 		result.Code = domain.INVALID_SMS_CAPTCHA
 		result.Msg = "短信验证码错误"
-		logger.Info(nil, "SendSmsCaptcha failed channel: %s, phone:%s, token:%s, captcha:%s",channel,phone, token, captcha)
+		logger.Info(nil, "SendSmsCaptcha failed channel: %s, phone:%s, token:%s, captcha:%s",channel,phone, token, ca)
+	}
+	b, err := json.Marshal(result)
+	if nil == err{
+		w.Write(b)
+	}else{
+		w.Write([]byte(errorStr))
+	}
+}
+
+//人工验证短信验证码
+func ManMadeSmsCaptcha(w http.ResponseWriter, req *http.Request){
+	channel := getPathParam("channel",req)
+	phone := req.FormValue("phone")
+	ip := requtil.GetIp(req)
+	logger.Info(nil, "ManMadeSmsCaptcha ip:%s, channel:%s, phone:%s",ip,channel,phone)
+	setCommonHeaders(&w)
+	w.Header().Set("Content-Type", "application/json")
+
+	result := domain.ManMadeSmsCaptcha{}
+	result.Code = domain.SUCCESS
+	result.Msg = "success"
+	ca := convert.BytesToString(random.RandomNum(6))
+	err := verify.ManMadeSmsCaptcha(phone, ca)
+	if nil == err{
+		result.Captcha = ca
+		result.Code = domain.SUCCESS
+		result.Msg = "生成成功"
+	}else{
+		result.Code = domain.INVALID_SMS_CAPTCHA
+		result.Msg = "生成失败"
+		logger.Info(nil, "ManMadeSmsCaptcha failed channel: %s, phone:%s",channel,phone)
 	}
 	b, err := json.Marshal(result)
 	if nil == err{

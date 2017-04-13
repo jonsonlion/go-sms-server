@@ -40,7 +40,6 @@
         });
     }
     function checkCaptcha() {
-
         var smscaptcha = $("#smscaptcha").val();
         if("" == smscaptcha){
             alert("请填短信验证码");
@@ -52,6 +51,20 @@
             data: { phone:$("#smsphone").val(), token:$("#smstoken").val(), captcha:smscaptcha}
         }).done(function( msg ) {
             $("#checkResult").empty().text( "验证完成: " + JSON.stringify(msg) );
+        });
+    }
+    function setCaptcha() {
+        var phoneManMade = $("#phoneManMade").val();
+        if("" == phoneManMade){
+            alert("请填手机号");
+            return ;
+        }
+        $.ajax({
+            url: "http://127.0.0.1:9090/api/1/openaccount/captcha/sms/manmade",
+            method: "POST",
+            data: { phone:phoneManMade}
+        }).done(function( msg ) {
+            $("#setResult").empty().text( "设置结果: " + JSON.stringify(msg) );
         });
     }
 </script>
@@ -75,13 +88,16 @@
 <hr/>
 3. 验证短信验证码：
 <br/>
-<input id="smstoken" size="50"/>
-<input id="smsphone" size="50"/>
+<input id="smstoken" size="50"/><br/>
+手机号<input id="smsphone" size="50"/>
 <br/>
 短信验证码：<input id="smscaptcha" /><a href="#" onclick="checkCaptcha()" >验证</a>
-<div id="checkResult">
-
-</div>
+<div id="checkResult"></div>
+<hr>
+4. 人工设置验证码
+<br/>
+手机号：<input id="phoneManMade" /><a href="#" onclick="setCaptcha()" >设置</a>
+<div id="setResult"></div>
 <br>
 <br>
 </body>
